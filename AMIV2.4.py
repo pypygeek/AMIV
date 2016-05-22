@@ -93,7 +93,7 @@ Print_Logo()
 
 def File_Info():	
 	Report.write('\n\n=============================File Information==============================')
-	Report.write('\n\nFile Name : ' + os.path.basename(filename))
+	Report.write('\n\nFile Name : ' + os.path.basename(filename).encode('utf-8'))
 	Report.write('\nMD5 : ' + hashlib.md5(data).hexdigest())
 	Report.write('\nSHA-1 : ' + hashlib.sha1(data).hexdigest())
 	Report.write('\nSHA-256 : ' + hashlib.sha256(data).hexdigest())
