@@ -83,7 +83,7 @@ except IOError:
 	
 def Print_Logo():
 	Report.write('=' * 75)
-	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.3] Report')
+	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.4] Report')
 	Report.write('\nBlog:http://geeklab.tistory.com/')
 	Report.write('\nE-mail:geeklab@naver.com')
 	Report.write('\nUndex.exe Power By nurilab  URL : http://www.nurilab.net/ \n\n')
