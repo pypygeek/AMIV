@@ -6,14 +6,8 @@ from Tkinter import *
 import axmlprinter
 from xml.etree.ElementTree import parse 
 from xml.dom import minidom
-import hashlib
-import os
-import sys
-import zipfile
-import struct
-import mmap
-import re
-import shutil
+import hashlib, os, sys, zipfile, struct, mmap, re,shutil 
+import json, urllib, urllib2, argparse
 
 #Remove TempFolder
 def Remove_Temp() :
@@ -83,7 +77,7 @@ except IOError:
 	
 def Print_Logo():
 	Report.write('=' * 75)
-	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.4] Report')
+	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.5] Report')
 	Report.write('\nBlog:http://geeklab.tistory.com/')
 	Report.write('\nE-mail:geeklab@naver.com')
 	Report.write('\nUndex.exe Power By nurilab  URL : http://www.nurilab.net/ \n\n')
@@ -115,13 +109,13 @@ def App_Info():
 	for pack in note.iter('manifest'):
 		Report.write('\n==============================APP Information==============================\n')
 		m = pack.attrib.values()
-		Report.write('\nPackage: ' + str(pack.attrib.values()))
+		Report.write('\nPackage: ' + str(pack.attrib.values() [0]))
 	for per in note.iter('uses-permission'):
-		Report.write('\nPermission: ' + str(per.attrib.values()))
+		Report.write('\nPermission: ' + str(per.attrib.values() [0]))
 	for rec in note.iter('receiver'):
-		Report.write('\nReciver: ' + str(rec.attrib.values()))
+		Report.write('\nReciver: ' + str(rec.attrib.values() [0]))
 	for ser in note.iter('service'):
-		Report.write('\nService: ' + str(ser.attrib.values()))
+		Report.write('\nService: ' + str(ser.attrib.values() [0]))
 
 	
 try:
@@ -198,8 +192,25 @@ try:
 	Patten_extract()
 	mm.close()
 except NameError:
-	pass	
-		
+	pass
+	
+Report.write('\n\n===========================VirusTotal Information===========================\n')
+
+def Virus_Total():
+	api = 'Your API'
+	md5 = hashlib.md5(data).hexdigest()
+	param = {'resource':md5,'apikey':api}
+	url = "https://www.virustotal.com/vtapi/v2/file/report"
+	udata = urllib.urlencode(param)
+	result = urllib2.urlopen(url,udata)
+	jdata = json.loads(result.read())
+	if jdata['response_code'] == 0:
+		Report.write('Not Found in VirusTotal')
+	Report.write('\nScanned on:' + jdata['scan_date'] + '\n' + '\n')
+	for x in jdata['scans']:
+		Report.write(x + ' : ' + str(jdata['scans'][x]['result']) + '\n')
+Virus_Total()
+
 Remove_Temp()
 Report.close()
 sys.exit()
