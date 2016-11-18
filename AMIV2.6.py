@@ -1,8 +1,4 @@
 #-*- coding: utf-8 -*-
-import Tkinter
-import tkMessageBox
-from tkFileDialog import askopenfilename
-from Tkinter import *
 import axmlprinter
 from xml.etree.ElementTree import parse 
 from xml.dom import minidom
@@ -19,22 +15,7 @@ def Remove_Temp() :
 #Create AMIVReport.txt 
 Report = open('AMIVReport.txt', 'w')
 
-#Tkinter GUI
-root = Tkinter.Tk()
-root.title('Android Malware Info Visibility Tool')
-root.geometry("500x200")
-
-#Tkinter Button
-def Choose_File():
-	filename = askopenfilename(parent=root)
-	return filename
-analyzeButtn = Tkinter.Button(root, text = "Choose File", command = Choose_File, width=50)
-analyzeButtn.pack()
-
-filename = Choose_File()
-
-w = Label(root, text = 'Choose File : ' + filename)
-w.pack() 
+filename = sys.argv[1]
 
 #Read File 
 try:
@@ -49,20 +30,25 @@ except IOError:
 except NameError:
 	Report.write('ERROR : Choose File')
 
-#UnZip
-try :
-	fzip = zipfile.ZipFile(f, 'r')
-	fzip.extractall(path='./AMIV_Temp')
-	fzip.close()
-except RuntimeError:
-	Report.write('ERROR : PassWorld File or Unknow Error')
-	Remove_Temp()
-	sys.exit()
-except zipfile.BadZipfile:
-	Report.write('File is not a zip file')
-	sys.exit()
-except NameError:
-	Report.write('ERROR : Choose APK File')
+def apkCheck():
+	if '\xFE\xCA\x00\x00' in data:
+		#Unzip
+		try :
+			fzip = zipfile.ZipFile(f, 'r')
+			fzip.extractall(path='./AMIV_Temp')
+			fzip.close()
+		except RuntimeError:
+			Report.write('ERROR : PassWorld File or Unknow Error')
+			Remove_Temp()
+			sys.exit()
+		except zipfile.BadZipfile:
+			Report.write('File is not a zip file')
+			sys.exit()
+		except NameError:
+			Report.write('ERROR : Choose APK File')
+	else: 
+		Report.write('ERROR : NOT a APK')
+apkCheck()
 
 #Read Classes.dex	
 try:
@@ -77,7 +63,7 @@ except IOError:
 	
 def Print_Logo():
 	Report.write('=' * 75)
-	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.5] Report')
+	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.6] Report')
 	Report.write('\nBlog:http://geeklab.tistory.com/')
 	Report.write('\nE-mail:geeklab@naver.com')
 	Report.write('\nUndex.exe Power By nurilab  URL : http://www.nurilab.net/ \n\n')
@@ -194,24 +180,6 @@ try:
 except NameError:
 	pass
 	
-Report.write('\n\n===========================VirusTotal Information===========================\n')
-
-def Virus_Total():
-	api = 'Your API'
-	md5 = hashlib.md5(data).hexdigest()
-	param = {'resource':md5,'apikey':api}
-	url = "https://www.virustotal.com/vtapi/v2/file/report"
-	udata = urllib.urlencode(param)
-	result = urllib2.urlopen(url,udata)
-	jdata = json.loads(result.read())
-	if jdata['response_code'] == 0:
-		Report.write('Not Found in VirusTotal')
-	Report.write('\nScanned on:' + jdata['scan_date'] + '\n' + '\n')
-	for x in jdata['scans']:
-		Report.write(x + ' : ' + str(jdata['scans'][x]['result']) + '\n')
-Virus_Total()
-
 Remove_Temp()
 Report.close()
 sys.exit()
-root.mainloop()
