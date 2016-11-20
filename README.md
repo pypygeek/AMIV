@@ -5,6 +5,4 @@ Used import py http://code.openhub.net/project?pid=adPjeQuZzng&cid=LYAQtjlfz-c&f
 
 blog :  http://geeklab.tistory.com
 
-Undex.exe : http://www.nurilab.net/
-
 AMIV Big change coming soon!!
