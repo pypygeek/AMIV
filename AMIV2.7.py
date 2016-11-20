@@ -37,12 +37,25 @@ def apkCheck():
 			fzip = zipfile.ZipFile(f, 'r')
 			fzip.extractall(path='./AMIV_Temp')
 			fzip.close()
+			#check valid apk file
+			street = './AMIV_Temp'
+			for root, dirs, files in os.walk(street):
+				for file in files:
+					if file == 'AndroidManifest.xml':
+						return True
+					elif 'resources.arsc' in file:
+						return True
+					elif 'Classes.dex' in file:
+						return True
+					else: 
+						Report.write('ERROR : Corrupted APK File')
+						sys.exit()
 		except RuntimeError:
 			Report.write('ERROR : PassWorld File or Unknow Error')
 			Remove_Temp()
 			sys.exit()
 		except zipfile.BadZipfile:
-			Report.write('File is not a zip file')
+			Report.write('ERROR : Faile Unzip')
 			sys.exit()
 		except NameError:
 			Report.write('ERROR : Choose APK File')
@@ -55,7 +68,6 @@ try:
 	fp = open('./AMIV_Temp/classes.dex', 'rb')
 	mm = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
 	fp.close()
-	os.system('undex.exe ' + './AMIV_Temp/classes.dex ' + '-d')
 except IOError:
 	Report.write('\nNot Found Classes.dex\n')
 	Remove_Temp()
@@ -63,11 +75,9 @@ except IOError:
 	
 def Print_Logo():
 	Report.write('=' * 75)
-	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.6] Report')
+	Report.write('\n\nAndroid Malware Info Visibility [Ver 2.7] Report')
 	Report.write('\nBlog:http://geeklab.tistory.com/')
 	Report.write('\nE-mail:geeklab@naver.com')
-	Report.write('\nUndex.exe Power By nurilab  URL : http://www.nurilab.net/ \n\n')
-	Report.write('=' * 75)
 
 Print_Logo()
 
