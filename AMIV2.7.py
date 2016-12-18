@@ -1,206 +1,201 @@
 # -*- coding: utf-8 -*-
 import libs.axmlprinter as axmlprinter
-from xml.etree.ElementTree import parse
+
+from libs.reader import APKReader
+from libs.dexparse import DEXParse
+
+from xml.etree.ElementTree import fromstring
 from xml.dom import minidom
+from optparse import OptionParser
+
+
 import hashlib
 import os
 import sys
-import zipfile
-import struct
-import mmap
 import re
-import shutil
 
 
-# Remove TempFolder
-def Remove_Temp():
-    try:
-        shutil.rmtree('AMIV_Temp')
-    except OSError as e:
-        pass
+class AMIVAnalysis:
+    """
+    AMIV Analysis class
+    @param : filename <apk file>
+    @param : outfile <txt file>
+    """
+    def __init__(self, filename, outfile):
+        self.filename = filename
+        self.outfile = outfile
+        self.stream = open(filename, 'rb').read()
+        self.reader = APKReader(filename).extract()
+        self.report = {}
 
-# Create AMIVReport.txt
-Report = open('AMIVReport.txt', 'w')
+    def action(self):
+        if False in self.is_android():
+            print("Invaild APK file. AMIV aborted")
 
-filename = sys.argv[1]
+        self.parse_fileinfo()
+        self.parse_manifest()
+        self.parse_dexfile()
 
-# Read File
-try:
-    f = open(filename, 'rb')
-    data = f.read()
-except IndexError:
-    Report.write('ERROR : AMIV.exe example.apk')
-    sys.exit()
-except IOError:
-    Report.write('ERROR : AMIV.exe example.apk')
-    sys.exit()
-except NameError:
-    Report.write('ERROR : Choose File')
+    def parse_fileinfo(self):
+        """
+        parse file basic information
+        """
+        self.report['fileinfo'] = {}
+        self.report['fileinfo']['filename'] = os.path.basename(self.filename)
+        self.report['fileinfo']['hash'] = {
+            'md5': hashlib.md5(self.stream).hexdigest(),
+            'sha1': hashlib.sha1(self.stream).hexdigest(),
+            'sha256': hashlib.sha256(self.stream).hexdigest()
+        }
+        self.report['fileinfo']['filesize'] = os.path.getsize(self.filename)
 
+    def parse_manifest(self):
+        """
+        parse apk file manifest information
+        """
 
-def apkCheck():
-    if '\xFE\xCA\x00\x00' in data:
-        # Unzip
-        try:
-            fzip = zipfile.ZipFile(f, 'r')
-            fzip.extractall(path='./AMIV_Temp')
-            fzip.close()
-            # check valid apk file
-            street = './AMIV_Temp'
-            for root, dirs, files in os.walk(street):
-                for file in files:
-                    if file == 'AndroidManifest.xml':
-                        return True
-                    elif 'resources.arsc' in file:
-                        return True
-                    elif 'Classes.dex' in file:
-                        return True
-                    else:
-                        Report.write('ERROR : Corrupted APK File')
-                        sys.exit()
-        except RuntimeError:
-            Report.write('ERROR : PassWorld File or Unknow Error')
-            Remove_Temp()
-            sys.exit()
-        except zipfile.BadZipfile:
-            Report.write('ERROR : Faile Unzip')
-            sys.exit()
-        except NameError:
-            Report.write('ERROR : Choose APK File')
-    else:
-        Report.write('ERROR : NOT a APK')
-apkCheck()
+        self.report['manifest'] = {}
 
-# Read Classes.dex
-try:
-    fp = open('./AMIV_Temp/classes.dex', 'rb')
-    mm = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
-    fp.close()
-except IOError:
-    Report.write('\nNot Found Classes.dex\n')
-    Remove_Temp()
-    sys.exit()
+        printer = axmlprinter.AXMLPrinter(self.reader['AndroidManifest.xml'])
+        buffer = minidom.parseString(printer.getBuff()).toxml()
 
+        tree = fromstring(buffer)
 
-def Print_Logo():
-    Report.write('=' * 75)
-    Report.write('\n\nAndroid Malware Info Visibility [Ver 2.7] Report')
-    Report.write('\nBlog:http://geeklab.tistory.com/')
-    Report.write('\nE-mail:geeklab@naver.com')
+        # get android package name
+        self.report['manifest']['package'] = tree.get('package')
 
-Print_Logo()
+        # get permission list
 
+        permissions = []
 
-def File_Info():
-    Report.write('\n\n=============================File Information==============================')
-    Report.write('\n\nFile Name : ' + os.path.basename(filename).encode('utf-8'))
-    Report.write('\nMD5 : ' + hashlib.md5(data).hexdigest())
-    Report.write('\nSHA-1 : ' + hashlib.sha1(data).hexdigest())
-    Report.write('\nSHA-256 : ' + hashlib.sha256(data).hexdigest())
-    Report.write('\nFile Size : ' + str(os.path.getsize(filename)) + ' Byte\n')
+        for pack in tree.iter('uses-permission'):
+            permissions.append(pack.attrib.values()[0])
 
-File_Info()
+        self.report['manifest']['permissions'] = permissions
 
+        # get services
 
-def App_Info():
-    # AndroidManifest.xml Parsing
-    ap = axmlprinter.AXMLPrinter(open('./AMIV_Temp/AndroidManifest.xml', 'rb').read())
-    buff = minidom.parseString(ap.getBuff()).toxml()
+        services = []
 
-    # Create AndroidManifest.xml Parsing Data Temp File
-    fx = open('./AMIV_Temp/AndroidManifestTemp','w')
-    fx.write(buff.encode('utf-8'))
-    fx.close()
-    tree = parse('./AMIV_Temp/AndroidManifestTemp')
-    note = tree.getroot()
-    for pack in note.iter('manifest'):
-        Report.write('\n==============================APP Information==============================\n')
-        m = pack.attrib.values()
-        Report.write('\nPackage: ' + str(pack.attrib.values() [0]))
-    for per in note.iter('uses-permission'):
-        Report.write('\nPermission: ' + str(per.attrib.values() [0]))
-    for rec in note.iter('receiver'):
-        Report.write('\nReciver: ' + str(rec.attrib.values() [0]))
-    for ser in note.iter('service'):
-        Report.write('\nService: ' + str(ser.attrib.values() [0]))
+        for pack in tree.iter('service'):
+            services.append(pack.attrib.values()[0])
 
+        self.report['manifest']['services'] = services
 
-try:
-    App_Info()
-except IOError:
-    Report.write('Not found AndroidManifest.xml')
+        # get receivers
 
+        receivers = []
 
-# class.dex struct analysis
-def header(mm):
-    file_size = struct.unpack('<L', mm[0x20:0x24])[0]
-    string_ids_size = struct.unpack('<L', mm[0x38:0x3C])[0]
-    string_ids_off = struct.unpack('<L', mm[0x3C:0x40])[0]
+        for pack in tree.iter('receiver'):
+            value = pack.attrib.values()
+            i = 0  # value counter
+            for i in range(0, len(value)):
+                if not value[i].startswith('@') and \
+                        not value[i].startswith("android.permission"):
+                    receivers.append(value[i])
+                    break
 
-    hdr = {}
+        self.report['manifest']['receivers'] = receivers
 
-    if len(mm) != file_size:
-        return hdr
+    def parse_dexfile(self):
+        """
+        parse dex file
+        """
+        self.report['strings'] = []
 
-    hdr['string_ids_size'] = string_ids_size
-    hdr['string_ids_off'] = string_ids_off
+        d = DEXParse(self.reader['classes.dex'])
+        strlist = d.parse()
+        del d
 
-    return hdr
+        # regular expression list
+        regexs = {
+            'URL': r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+            'IP': r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}',
+            'E-mail': r'\w+@\w+\.\w+'
+        }
 
-try:
-    hdr = header(mm)
-except NameError:
-    pass
+        for value in strlist:
+            for key in regexs.keys():
+                match = re.search(regexs[key], value)
+                if match:
+                    self.report['strings'].append({key: match.group()})
 
+    def beautify(self):
+        """
+        beautify the report
+        """
+        msg = "=" * 42
+        msg += "\n\nAndroid Malware Info Visibility [Ver 2.7] Report"
+        msg += "\nBlog:http://geeklab.tistory.com/"
+        msg += "\nE-mail:geeklab@naver.com"
 
-def string_id_list(mm, hdr):
-    string_id = []  # Save ALL Strings Data
+        # file information
+        msg += "\n\n=============File Information============="
+        msg += "\n\nFilename : {0}".format(self.report['fileinfo']['filename'])
+        msg += "\nMD5 : {0}".format(self.report['fileinfo']['hash']['md5'])
+        msg += "\nSHA1 : {0}".format(self.report['fileinfo']['hash']['sha1'])
+        msg += "\nSHA256 : {0}".format(self.report['fileinfo']['hash']['sha256'])
+        msg += "\nFilesize: {0} bytes".format(self.report['fileinfo']['filesize'])
 
-    string_ids_size = hdr['string_ids_size']
-    string_ids_off = hdr['string_ids_off']
+        # app manifest information
+        msg += "\n\n=============APP Information============="
+        msg += "\nPackage name : {0}".format(self.report['manifest']['package'])
 
-    for i in range(string_ids_size):
-        off = struct.unpack('<L', mm[string_ids_off+(i*4):string_ids_off+(i*4)+4])[0]
-        c_size = ord(mm[off])
-        c_char = mm[off+1:off+1+c_size]
+        for permission in self.report['manifest']['permissions']:
+            msg += "\nPermission : {0}".format(permission)
 
-        string_id.append(c_char)
+        for receiver in self.report['manifest']['receivers']:
+            msg += "\nReceiver : {0}".format(receiver)
 
-    return string_id
+        for service in self.report['manifest']['services']:
+            msg += "\nService : {0}".format(service)
 
-try:
-    string_ids = string_id_list(mm, hdr)
-except NameError:
-    pass
+        # interesting strings
+        msg += "\n\n=============Interesting Strings============="
 
-Report.write('\n\n=============================Interested Strings=============================\n')
+        for row in self.report['strings']:
+            k, v = row.items()[0]
+            msg += "\n{0} : {1}".format(k, v)
+
+        msg += "\n"
+
+        with open(self.outfile, 'w+') as f:
+            f.write(msg)
+
+        print(msg)
+
+    def is_android(self):
+        """
+        check if it is android file
+        """
+        # apk file pattern
+        patterns = [b'\xFE\xCA\x00\x00', b'AndroidManifest.xml',
+                    b'resources.arsc', b'classes.dex']
+
+        return [False for pattern in patterns if pattern not in self.stream]
+
+    def __del__(self):
+        del self
 
 
-def Patten_extract():
-    for i in range(len(string_ids)):
-        UrlRegular = re.search('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string_ids[i])
-        IpRegular = re.search('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', string_ids[i])
-        EmailRegular = re.search('\w+@\w+\.\w+', string_ids[i])
+if __name__ == '__main__':
+    parser = OptionParser(usage="%prog [-f] [-o]")
+    parser.add_option('-f', '--file', dest="filename",
+                      help="path of apk file",
+                      metavar="FILE")
+    parser.add_option('-o', '--outfile', dest="outfile",
+                      help="path of report file",
+                      metavar="FILE", default="AMIVReport.txt")
 
-        try:
-            Report.write('\nURL: ' + UrlRegular.group())
-        except AttributeError:
-            pass
-        try:
-            Report.write('\nIP: ' + IpRegular.group())
-        except AttributeError:
-            pass
-        try:
-            Report.write('\nE-mail: ' + EmailRegular.group())
-        except AttributeError:
-            pass
+    # argument parse
+    options, args = parser.parse_args()
 
-try:
-    Patten_extract()
-    mm.close()
-except NameError:
-    pass
+    # if filename not found
+    if options.filename is None:
+        parser.print_help()  # print help
+        sys.exit(2)
 
-Remove_Temp()
-Report.close()
-sys.exit()
+    a = AMIVAnalysis(options.filename, options.outfile)
+    a.action()
+    a.beautify()
+    del a
