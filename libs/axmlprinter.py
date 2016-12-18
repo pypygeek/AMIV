@@ -18,7 +18,7 @@
 
 import libs.bytecode as bytecode
 
-import libstypeconstants as tc
+import libs.typeconstants as tc
 from libs.axmlparser import AXMLParser
 from libs.bytecode import SV
 
