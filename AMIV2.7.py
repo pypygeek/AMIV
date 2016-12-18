@@ -1,19 +1,9 @@
 #-*- coding: utf-8 -*-
-import Tkinter
-import tkMessageBox
-from tkFileDialog import askopenfilename
-from Tkinter import *
 import axmlprinter
 from xml.etree.ElementTree import parse 
 from xml.dom import minidom
-import hashlib
-import os
-import sys
-import zipfile
-import struct
-import mmap
-import re
-import shutil
+import hashlib, os, sys, zipfile, struct, mmap, re,shutil 
+import json, urllib, urllib2, argparse
 
 #Remove TempFolder
 def Remove_Temp() :
@@ -25,22 +15,7 @@ def Remove_Temp() :
 #Create AMIVReport.txt 
 Report = open('AMIVReport.txt', 'w')
 
-#Tkinter GUI
-root = Tkinter.Tk()
-root.title('Android Malware Info Visibility Tool')
-root.geometry("500x200")
-
-#Tkinter Button
-def Choose_File():
-	filename = askopenfilename(parent=root)
-	return filename
-analyzeButtn = Tkinter.Button(root, text = "Choose File", command = Choose_File, width=50)
-analyzeButtn.pack()
-
-filename = Choose_File()
-
-w = Label(root, text = 'Choose File : ' + filename)
-w.pack() 
+filename = sys.argv[1]
 
 #Read File 
 try:
@@ -55,27 +30,44 @@ except IOError:
 except NameError:
 	Report.write('ERROR : Choose File')
 
-#UnZip
-try :
-	fzip = zipfile.ZipFile(f, 'r')
-	fzip.extractall(path='./AMIV_Temp')
-	fzip.close()
-except RuntimeError:
-	Report.write('ERROR : PassWorld File or Unknow Error')
-	Remove_Temp()
-	sys.exit()
-except zipfile.BadZipfile:
-	Report.write('File is not a zip file')
-	sys.exit()
-except NameError:
-	Report.write('ERROR : Choose APK File')
+def apkCheck():
+	if '\xFE\xCA\x00\x00' in data:
+		#Unzip
+		try :
+			fzip = zipfile.ZipFile(f, 'r')
+			fzip.extractall(path='./AMIV_Temp')
+			fzip.close()
+			#check valid apk file
+			street = './AMIV_Temp'
+			for root, dirs, files in os.walk(street):
+				for file in files:
+					if file == 'AndroidManifest.xml':
+						return True
+					elif 'resources.arsc' in file:
+						return True
+					elif 'Classes.dex' in file:
+						return True
+					else: 
+						Report.write('ERROR : Corrupted APK File')
+						sys.exit()
+		except RuntimeError:
+			Report.write('ERROR : PassWorld File or Unknow Error')
+			Remove_Temp()
+			sys.exit()
+		except zipfile.BadZipfile:
+			Report.write('ERROR : Faile Unzip')
+			sys.exit()
+		except NameError:
+			Report.write('ERROR : Choose APK File')
+	else: 
+		Report.write('ERROR : NOT a APK')
+apkCheck()
 
 #Read Classes.dex	
 try:
 	fp = open('./AMIV_Temp/classes.dex', 'rb')
 	mm = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
 	fp.close()
-	os.system('undex.exe ' + './AMIV_Temp/classes.dex ' + '-d')
 except IOError:
 	Report.write('\nNot Found Classes.dex\n')
 	Remove_Temp()
@@ -83,17 +75,15 @@ except IOError:
 	
 def Print_Logo():
 	Report.write('=' * 75)
-	Report.write('\n\nAndroid Malware Info Visibility Tool [Ver 2.3] Report')
+	Report.write('\n\nAndroid Malware Info Visibility [Ver 2.7] Report')
 	Report.write('\nBlog:http://geeklab.tistory.com/')
 	Report.write('\nE-mail:geeklab@naver.com')
-	Report.write('\nUndex.exe Power By nurilab  URL : http://www.nurilab.net/ \n\n')
-	Report.write('=' * 75)
 
 Print_Logo()
 
 def File_Info():	
 	Report.write('\n\n=============================File Information==============================')
-	Report.write('\n\nFile Name : ' + os.path.basename(filename))
+	Report.write('\n\nFile Name : ' + os.path.basename(filename).encode('utf-8'))
 	Report.write('\nMD5 : ' + hashlib.md5(data).hexdigest())
 	Report.write('\nSHA-1 : ' + hashlib.sha1(data).hexdigest())
 	Report.write('\nSHA-256 : ' + hashlib.sha256(data).hexdigest())
@@ -115,13 +105,13 @@ def App_Info():
 	for pack in note.iter('manifest'):
 		Report.write('\n==============================APP Information==============================\n')
 		m = pack.attrib.values()
-		Report.write('\nPackage: ' + str(pack.attrib.values()))
+		Report.write('\nPackage: ' + str(pack.attrib.values() [0]))
 	for per in note.iter('uses-permission'):
-		Report.write('\nPermission: ' + str(per.attrib.values()))
+		Report.write('\nPermission: ' + str(per.attrib.values() [0]))
 	for rec in note.iter('receiver'):
-		Report.write('\nReciver: ' + str(rec.attrib.values()))
+		Report.write('\nReciver: ' + str(rec.attrib.values() [0]))
 	for ser in note.iter('service'):
-		Report.write('\nService: ' + str(ser.attrib.values()))
+		Report.write('\nService: ' + str(ser.attrib.values() [0]))
 
 	
 try:
@@ -198,9 +188,8 @@ try:
 	Patten_extract()
 	mm.close()
 except NameError:
-	pass	
-		
+	pass
+	
 Remove_Temp()
 Report.close()
 sys.exit()
-root.mainloop()
