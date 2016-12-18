@@ -5,4 +5,6 @@ Used import py http://code.openhub.net/project?pid=adPjeQuZzng&cid=LYAQtjlfz-c&f
 
 blog :  http://geeklab.tistory.com
 
-AMIV Big change coming soon!!
+Used : AMIV2.7.py -f example.apk
+
+A person who helped : Kim Namjun(bunseokbot) https://github.com/bunseokbot/AMIV
