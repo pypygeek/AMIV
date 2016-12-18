@@ -18,9 +18,9 @@
 
 import bytecode
 
-import stringblock
+import libs.stringblock as stringblock
 import typeconstants as tc
-from stringblock import StringBlock
+from libs.stringblock import StringBlock
 from bytecode import SV
 
 import StringIO

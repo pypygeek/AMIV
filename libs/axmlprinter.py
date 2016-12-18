@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Androguard.  If not, see <http://www.gnu.org/licenses/>.
 
-import bytecode
+import libs.bytecode as bytecode
 
-import typeconstants as tc
-from axmlparser import AXMLParser
-from bytecode import SV
+import libstypeconstants as tc
+from libs.axmlparser import AXMLParser
+from libs.bytecode import SV
 
 import StringIO
 from struct import pack, unpack
