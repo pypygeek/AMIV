@@ -125,9 +125,9 @@ class AMIVAnalysis:
         beautify the report
         """
         msg = "=" * 42
-        msg += "\n\nAndroid Malware Info Visibility [Ver 2.7] Report"
+        msg += "\n\nAndroid Malware Info Visibility [Ver 0.2.7] Report"
         msg += "\nBlog:http://geeklab.tistory.com/"
-        msg += "\nE-mail:geeklab@naver.com"
+        msg += "\nE-mail:pypygeek@gmail.com"
 
         # file information
         msg += "\n\n=============File Information============="
